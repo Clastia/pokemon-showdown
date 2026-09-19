@@ -62,6 +62,39 @@ export const Scripts: ModdedBattleScriptsData = {
 			const subFormat = this.dex.formats.get(rule);
 			subFormat.onBegin?.call(this);
 		}
+
+		for (const side of this.sides) {
+			const oldGetRequestData = side.getRequestData;
+			side.getRequestData = function (getSupportData) {
+				// 1. Generate the standard baseline request packet payload
+				const data = oldGetRequestData.call(this, getSupportData);
+			
+				// 2. Overwrite the data blocks for the team array sent to the web client
+				if (data && data.pokemon) {
+					for (let i = 0; i < data.pokemon.length; i++) {
+						const livePokemon = this.pokemon[i];
+						const clientData = data.pokemon[i];
+						if (!livePokemon || !clientData) continue;
+
+						// Check if this pokemon is holding a dynamic Mix and Mega transformation item
+						if (livePokemon.m.originalSpecies && livePokemon.species.name !== livePokemon.m.originalSpecies) {
+							// Force the outbound network packet to use the true hybrid details and typing array
+							clientData.details = livePokemon.getUpdatedDetails();
+							clientData.types = livePokemon.species.types;
+						
+							// Re-inject the explicit item tag string so it permanently anchors to the health bar layout
+							const item = livePokemon.getItem();
+							if (item.exists) {
+								// Tells the UI layout engine to draw the white label pill (e.g., Charizardite X / Red Orb)
+								clientData.item = item.name; 
+							}
+						}
+					}
+				}
+				return data;
+			};
+		}
+
 		for (const pokemon of this.getAllPokemon()) {
 			const item = pokemon.getItem();
 			if (item.forcedForme && !item.zMove && item.forcedForme !== pokemon.species.name) {
@@ -310,11 +343,11 @@ export const Scripts: ModdedBattleScriptsData = {
 			this.checkFainted();
 		} else if ((action.choice === 'megaEvo' || action.choice === 'ultraBurst') && this.gen === 7) {
 			this.eachEvent('Update');
-			// recalculate dynamic battle priority for both mega and ultra burst transformations
+			// recalculate dynamic battle priority
 			for (const [i, queuedAction] of this.queue.list.entries()) {
 				if (queuedAction.pokemon === action.pokemon && queuedAction.choice === 'move') {
 					this.queue.list.splice(i, 1);
-					queuedAction.mega = 'done'; // prevents re-triggering loops
+					queuedAction.mega = 'done'; // Prevents re-triggering loops
 					this.queue.insertChoice(queuedAction, true);
 					break;
 				}
@@ -393,11 +426,23 @@ export const Scripts: ModdedBattleScriptsData = {
 	},
 	actions: {
 		canMegaEvo(pokemon) {
-			if (pokemon.species.isMega) return null;
+			if (pokemon.species.isMega || pokemon.species.name === 'Necrozma-Ultra') return null;
 
 			const item = pokemon.getItem();
+			
+			if (item.id === 'ultranecroziumz') {
+				if (['Necrozma-Dusk-Mane', 'Necrozma-Dawn-Wings'].includes(pokemon.species.name)) {
+					return 'Necrozma-Ultra';
+				}
+				return null; 
+			}
+
 			if (!item.megaStone) return null;
-			return Object.values(item.megaStone)[0];
+			return Object.values(item.megaStone)[0] || null;
+		},
+		// force cancel the native ultra burst action button tracking flag
+		canUltraBurst(pokemon) {
+			return null;
 		},
 		runMegaEvo(pokemon) {
 			if (pokemon.species.isMega) return false;
@@ -473,17 +518,20 @@ export const Scripts: ModdedBattleScriptsData = {
 			return species;
 		},
 		getFormeChangeDeltas(formeChangeSpecies, pokemon) {
-			// Should be fine as long as Necrozma-U doesn't get added or Game Freak makes me sad with some convoluted forme change
 			let baseSpecies = this.dex.species.get(formeChangeSpecies.isMega ?
 				formeChangeSpecies.battleOnly as string : formeChangeSpecies.baseSpecies);
+			
+			if (formeChangeSpecies.name === 'Zygarde-Mega') {
+				baseSpecies = this.dex.species.get('Zygarde-Complete');
+			}
+			// bruteforce unecro "fix"
 			if (formeChangeSpecies.name === 'Necrozma-Ultra' && pokemon) {
-				if (pokemon.baseSpecies.name === 'Necrozma-Dawn-Wings' || pokemon.m.originalSpecies === 'Necrozma-Dawn-Wings') {
+				if (pokemon.species.name === 'Necrozma-Dawn-Wings') {
 					baseSpecies = this.dex.species.get('Necrozma-Dawn-Wings');
-				} else {
+				} else if (pokemon.species.name === 'Necrozma-Dusk-Mane') {
 					baseSpecies = this.dex.species.get('Necrozma-Dusk-Mane');
 				}
-			}
-			if (formeChangeSpecies.name === 'Zygarde-Mega') {
+			}if (formeChangeSpecies.name === 'Zygarde-Mega') {
 				baseSpecies = this.dex.species.get('Zygarde-Complete');
 			}
 			const deltas: {
