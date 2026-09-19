@@ -182,6 +182,10 @@ export const Scripts: ModdedBattleScriptsData = {
 		case 'megaEvo':
 			this.actions.runMegaEvo(action.pokemon);
 			break;
+		case 'ultraBurst':
+			// Force the system to pass Ultra Burst to the custom dynamic forme action runner
+			this.actions.runMegaEvo(action.pokemon); 
+			break;
 		case 'runDynamax':
 			action.pokemon.addVolatile('dynamax');
 			action.pokemon.side.dynamaxUsed = true;
@@ -304,13 +308,13 @@ export const Scripts: ModdedBattleScriptsData = {
 			// in gen 3 or earlier, switching in fainted pokemon is done after
 			// every move, rather than only at the end of the turn.
 			this.checkFainted();
-		} else if (action.choice === 'megaEvo' && this.gen === 7) {
+		} else if ((action.choice === 'megaEvo' || action.choice === 'ultraBurst') && this.gen === 7) {
 			this.eachEvent('Update');
-			// In Gen 7, the action order is recalculated for a Pokémon that mega evolves.
+			// recalculate dynamic battle priority for both mega and ultra burst transformations
 			for (const [i, queuedAction] of this.queue.list.entries()) {
 				if (queuedAction.pokemon === action.pokemon && queuedAction.choice === 'move') {
 					this.queue.list.splice(i, 1);
-					queuedAction.mega = 'done';
+					queuedAction.mega = 'done'; // prevents re-triggering loops
 					this.queue.insertChoice(queuedAction, true);
 					break;
 				}
@@ -472,8 +476,12 @@ export const Scripts: ModdedBattleScriptsData = {
 			// Should be fine as long as Necrozma-U doesn't get added or Game Freak makes me sad with some convoluted forme change
 			let baseSpecies = this.dex.species.get(formeChangeSpecies.isMega ?
 				formeChangeSpecies.battleOnly as string : formeChangeSpecies.baseSpecies);
-			if (formeChangeSpecies.name === 'Necrozma-Ultra') {
-				baseSpecies = this.dex.species.get('Necrozma-Dusk-Mane');
+			if (formeChangeSpecies.name === 'Necrozma-Ultra' && pokemon) {
+				if (pokemon.baseSpecies.name === 'Necrozma-Dawn-Wings' || pokemon.m.originalSpecies === 'Necrozma-Dawn-Wings') {
+					baseSpecies = this.dex.species.get('Necrozma-Dawn-Wings');
+				} else {
+					baseSpecies = this.dex.species.get('Necrozma-Dusk-Mane');
+				}
 			}
 			if (formeChangeSpecies.name === 'Zygarde-Mega') {
 				baseSpecies = this.dex.species.get('Zygarde-Complete');
