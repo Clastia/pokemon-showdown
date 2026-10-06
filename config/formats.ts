@@ -345,8 +345,8 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 		ruleset: ['Standard Draft', 'Min Source Gen = 9'],
 	},
 		{
-		name: "[Gen 9] NatDex 4v4 Mix and Mega Doubles Draft (Bo3)",
-		desc: `Mega evolve any Pok&eacute;mon with any mega stone, or transform them with Genesect Drives, Primal orbs, Origin orbs, Rusted items, Ogerpon Masks, Arceus Plates, and Silvally Memories with no limit. Mega and Primal boosts based on form changes from gen 7.`,
+		name: "[Gen 9] NDMnM 4v4 Doubles Draft (Bo3)",
+		desc: `Doubles-based. Mega evolve any Pok&eacute;mon with any mega stone, or transform them with Genesect Drives, Primal orbs, Origin orbs, Rusted items, Ogerpon Masks, Arceus Plates, and Silvally Memories with no limit. Mega and Primal boosts based on form changes from gen 7.`,
 		mod: 'mixandmega',
 		gameType: 'doubles',
 		searchShow: false,
