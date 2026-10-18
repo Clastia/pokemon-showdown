@@ -700,12 +700,12 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 		// searchShow: false,
 		ruleset: ['Standard OMs', 'Force of the Fallen Mod', 'Sleep Moves Clause', 'Terastal Clause'],
 		banlist: [
-			'Arceus', 'Calyrex-Ice', 'Calyrex-Shadow', 'Chi-Yu', 'Chien-Pao', 'Deoxys-Attack', 'Deoxys-Normal', 'Deoxys-Speed', 'Dialga', 'Dialga-Origin',
-			'Espathra', 'Eternatus', 'Falinks', 'Flutter Mane', 'Giratina', 'Giratina-Origin', 'Groudon', 'Ho-Oh', 'Iron Bundle', 'Komala', 'Kommo-o', 'Koraidon',
-			'Kyogre', 'Kyurem-Black', 'Kyurem-White', 'Landorus-Incarnate', 'Lilligant-Hisui', 'Lugia', 'Lunala', 'Magearna', 'Mewtwo', 'Miraidon', 'Necrozma-Dawn-Wings',
-			'Necrozma-Dusk-Mane', 'Palafin', 'Palkia', 'Palkia-Origin', 'Rayquaza', 'Regieleki', 'Reshiram', 'Shaymin-Sky', 'Smeargle', 'Sneasler', 'Solgaleo',
-			'Spectrier', 'Zacian', 'Zacian-Crowned', 'Zamazenta-Crowned', 'Zekrom', 'Arena Trap', 'Contrary', 'Moody', 'Shadow Tag', 'Booster Energy',
-			'King\'s Rock', 'Razor Fang', 'Baton Pass', 'Last Respects', 'Rage Fist', 'Shed Tail',
+			'Arceus', 'Archaludon', 'Calyrex-Ice', 'Calyrex-Shadow', 'Chi-Yu', 'Chien-Pao', 'Deoxys-Attack', 'Deoxys-Normal', 'Deoxys-Speed', 'Dialga', 'Dialga-Origin',
+			'Espathra', 'Eternatus', 'Falinks', 'Flutter Mane', 'Giratina', 'Giratina-Origin', 'Gouging-Fire', 'Groudon', 'Ho-Oh', 'Iron Bundle', 'Komala', 'Kommo-o',
+			'Koraidon', 'Kyogre', 'Kyurem-Black', 'Kyurem-White', 'Landorus-Incarnate', 'Lilligant-Hisui', 'Lugia', 'Lunala', 'Magearna', 'Mewtwo', 'Miraidon',
+			'Necrozma-Dawn-Wings', 'Necrozma-Dusk-Mane', 'Palafin', 'Palkia', 'Palkia-Origin', 'Rayquaza', 'Regieleki', 'Reshiram', 'Shaymin-Sky', 'Smeargle', 'Sneasler',
+			'Solgaleo', 'Spectrier', 'Zacian', 'Zacian-Crowned', 'Zamazenta-Crowned', 'Zekrom', 'Arena Trap', 'Contrary', 'Moody', 'Shadow Tag', 'Booster Energy',
+			'Damp Rock', 'Heat Rock', 'King\'s Rock', 'Razor Fang', 'Baton Pass', 'Last Respects', 'Rage Fist', 'Shed Tail',
 		],
 		restricted: ['Belly Drum', 'Destiny Bond', 'Extreme Speed', 'Population Bomb', 'Quiver Dance', 'Revival Blessing', 'Shell Smash', 'Tail Glow'],
 	},
@@ -814,17 +814,18 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 			'Last Respects', 'Shed Tail', 'Ceruledge', 'Raging Bolt', 'Kingambit',
 		],
 		onValidateTeam(team, format, teamHas) {
-			const heads: { [speciesid: string]: any[] } = require('../data/mods/gen9randomtandem/tandems.json');
-			// Need 2 Heads
-			let headCount = 0;
-			for (const set of team) {
-				let species = this.toID(this.dex.species.get(set.species));
-				// hardcode, not like any other species will increment headCount
-				if (species === 'keldeoresolute') species = 'keldeo' as ID;
-				if (species === 'dudunsparcethreesegment') species = 'dudunsparce' as ID;
-				if (heads[species]) headCount++;
-			}
-			if (headCount < 2) return [`You must have at least 2 Head Pokemon.`];
+			// head count is due to a softlock, but said softlock doesn't seem to exist anymore?
+			// const heads: { [speciesid: string]: any[] } = require('../data/mods/gen9randomtandem/tandems.json');
+			// // Need 2 Heads
+			// let headCount = 0;
+			// for (const set of team) {
+			// 	let species = this.toID(this.dex.species.get(set.species));
+			// 	// hardcode, not like any other species will increment headCount
+			// 	if (species === 'keldeoresolute') species = 'keldeo' as ID;
+			// 	if (species === 'dudunsparcethreesegment') species = 'dudunsparce' as ID;
+			// 	if (heads[species]) headCount++;
+			// }
+			// if (headCount < 2) return [`You must have at least 2 Head Pokemon.`];
 			if (team.length > 3) return [`You cannot bring more than 3 Pokemon.`];
 		},
 		onValidateSet(set, format, setHas, teamHas) {
@@ -2758,13 +2759,13 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 					} else {
 						if (!isDrag && !sourceEffect) switchCopyFlag = 'copyvolatile';
 					}
-					if (!oldActive.skipBeforeSwitchOutEventFlag && !isDrag) {
+					if (!oldActive.skipPursuit && !isDrag) {
 						this.battle.runEvent('BeforeSwitchOut', oldActive);
 						if (this.battle.gen >= 5) {
 							this.battle.eachEvent('Update');
 						}
 					}
-					oldActive.skipBeforeSwitchOutEventFlag = false;
+					oldActive.skipPursuit = false;
 					if (!this.battle.runEvent('SwitchOut', oldActive)) {
 						// Warning: DO NOT interrupt a switch-out if you just want to trap a pokemon.
 						// To trap a pokemon and prevent it from switching out, (e.g. Mean Look, Magnet Pull)
@@ -2776,7 +2777,7 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 					}
 					if (!oldActive.hp) {
 						// a pokemon fainted from Pursuit before it could switch
-						return 'pursuitfaint';
+						return false;
 					}
 
 					// will definitely switch out at this point
@@ -2825,7 +2826,6 @@ export const Formats: import('../sim/dex-formats').FormatList = [
 				} else {
 					this.battle.add(isDrag ? 'drag' : 'switch', pokemon, pokemon.getFullDetails);
 				}
-				if (isDrag && this.battle.gen === 2) pokemon.draggedIn = this.battle.turn;
 				pokemon.previouslySwitchedIn++;
 
 				if (isDrag && this.battle.gen >= 5) {
