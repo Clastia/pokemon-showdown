@@ -426,43 +426,39 @@ export const Scripts: ModdedBattleScriptsData = {
 	},
 	actions: {
 		canMegaEvo(pokemon) {
-			if (pokemon.species.isMega || pokemon.species.name === 'Necrozma-Ultra') return null;
+			if (pokemon.species.isMega) return null;
 
 			const item = pokemon.getItem();
-			
-			if (item.id === 'ultranecroziumz') {
-				if (['Necrozma-Dusk-Mane', 'Necrozma-Dawn-Wings'].includes(pokemon.species.name)) {
-					return 'Necrozma-Ultra';
-				}
-				return null; 
-			}
-
-			if (!item.megaStone) return null;
-			return Object.values(item.megaStone)[0] || null;
-		},
-		// force cancel the native ultra burst action button tracking flag
-		canUltraBurst(pokemon) {
+			if (item.megaStone) return Object.values(item.megaStone)[0];
+			if (pokemon.baseMoves.includes("dragonascent")) return "Rayquaza-Mega";
 			return null;
 		},
 		runMegaEvo(pokemon) {
 			if (pokemon.species.isMega) return false;
 
-			const species: Species = (this as any).getMixedSpecies(pokemon.m.originalSpecies, pokemon.canMegaEvo, pokemon);
+			const isUltraBurst = !pokemon.canMegaEvo;
 
-			/* Do we have a proper sprite for it? Code for when megas actually exist
-			if (this.dex.species.get(pokemon.canMegaEvo!).baseSpecies === pokemon.m.originalSpecies) {
+			const species: Species = (this as any).getMixedSpecies(pokemon.m.originalSpecies,
+				pokemon.canMegaEvo || pokemon.canUltraBurst, pokemon);
+
+			/// Do we have a proper sprite for it? Code for when megas actually exist
+			if (this.battle.ruleTable.has('natdexmod') &&
+				(isUltraBurst || this.dex.species.get(pokemon.canMegaEvo as any).baseSpecies === pokemon.m.originalSpecies)) {
 				pokemon.formeChange(species, pokemon.getItem(), true);
-			} else { */
-			const oSpecies = this.dex.species.get(pokemon.m.originalSpecies);
-			const oMegaSpecies = this.dex.species.get((species as any).originalSpecies);
-			pokemon.formeChange(species, pokemon.getItem(), true);
-			this.battle.add('-start', pokemon, oMegaSpecies.requiredItem, '[silent]');
-			if (oSpecies.types.join('/') !== pokemon.species.types.join('/')) {
-				this.battle.add('-start', pokemon, 'typechange', pokemon.species.types.join('/'), '[silent]', '[from] format: Mix and Mega');
+			} else {
+				const oSpecies = this.dex.species.get(pokemon.m.originalSpecies);
+				const oMegaSpecies = this.dex.species.get((species as any).originalSpecies);
+				pokemon.formeChange(species, pokemon.getItem(), true);
+				this.battle.add('-start', pokemon, oMegaSpecies.requiredItem || oMegaSpecies.requiredMove, '[silent]');
+				if (oSpecies.types.join('/') !== pokemon.species.types.join('/')) {
+					this.battle.add('-start', pokemon, 'typechange', pokemon.species.types.join('/'), '[silent]', '[from] format: Mix and Mega');
+				}
 			}
-			// }
+		
+	
 
 			pokemon.canMegaEvo = false;
+			if (this.battle.ruleTable.has('natdexmod') && isUltraBurst) pokemon.canUltraBurst = null;
 			return true;
 		},
 		terastallize(pokemon) {
